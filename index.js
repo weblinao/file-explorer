@@ -3,31 +3,15 @@ let stdin = process.stdin;
 let stdout = process.stdout;
 let stats = [];
 let currDirFiles = [];
-const cwd = process.cwd();
+let currDirAddress = process.cwd();
 
 function readDir(dirAddress) {
-  function checkIsShowDirDetail(isContinue) {
-    isContinue = isContinue.toLowerCase().trim();
-    if (isContinue.toLowerCase() === 'y') {
-      stdin.pause();
-      stdin.off('data', checkIsShowDirDetail);
-      // 继续读取文件夹
-    } else {
-      process.exit(1);
-    }
-  }
   fs.readdir(dirAddress, (err, files) => {
     if (err) return console.error(err);
-    console.log('');
-    console.log('   (' + files.length + ') files');
-    files.forEach((file) => {
-      console.log('   - ' + file);
-    })
-    console.log('');
-    stdout.write('    \033[33mDo you want to show detail: (y/n) \033[39m\n');
-    stdin.resume();
-    stdin.setEncoding('utf8');
-    stdin.on('data', checkIsShowDirDetail);
+
+    currDirFiles = files;
+    stats = [];
+    showFileInDirector(files, 0, dirAddress);
   })
 }
 // 读取后的操作函数
@@ -39,9 +23,10 @@ function option(fileIndex) {
     stdin.pause();
     stdin.off('data', option);
 
-    const address = `${__dirname}/${filename}`;
-    if (stats[Number(fileIndex)].isDirectory()) { // 选取的是文件夹
-      readDir(address);
+    const address = `${currDirAddress}/${filename}`;
+    if (stats[Number(fileIndex)].isDirectory()) {
+      currDirAddress = address
+      readDir(currDirAddress);
     } else {
       fs.readFile(address, 'utf8', (err, data) => {
         if (err) return console.error(err);
@@ -59,10 +44,10 @@ function getDataFromKeybord() {
   stdin.setEncoding('utf8');
   stdin.on('data', option);
 }
-function showFileInDirector(files, i) {
+function showFileInDirector(files, i, dirAddress) {
   let filename = files[i];
 
-  fs.stat(`${__dirname}/${filename}`, (err, stat) => {
+  fs.stat(`${dirAddress}/${filename}`, (err, stat) => {
     stats[i] = stat;
     if (err) return console.error(err);
 
@@ -77,11 +62,11 @@ function showFileInDirector(files, i) {
     if (i == files.length) {
       getDataFromKeybord();
     } else {
-      showFileInDirector(files, i);
+      showFileInDirector(files, i, dirAddress);
     }
   })
 }
-fs.readdir(cwd, (err, files) => {
+fs.readdir(currDirAddress, (err, files) => {
   if (err) return console.error(err);
   currDirFiles = files;
   console.log('');
@@ -92,5 +77,6 @@ fs.readdir(cwd, (err, files) => {
 
   console.log('   Select which file or directory you want to see\n');
 
-  showFileInDirector(files, 0);
+  stats = [];
+  showFileInDirector(files, 0, currDirAddress);
 })
